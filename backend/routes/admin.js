@@ -80,20 +80,26 @@ router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
 router.get('/productos', requireAuth, requireAdmin, async (req, res) => {
   try {
     const productos = await pool.query(`
-      SELECT id AS "Id", nombre AS "Nombre", descripcion AS "Descripcion",
-             precio AS "Precio", imagen_url AS "ImagenUrl", activo AS "Activo"
-      FROM productos
-      ORDER BY fecha_creacion DESC
+      SELECT p.id AS "Id", p.nombre AS "Nombre", p.descripcion AS "Descripcion",
+             p.precio AS "Precio", p.imagen_url AS "ImagenUrl", p.activo AS "Activo",
+             c.id AS "CategoriaId", c.nombre AS "Categoria"
+      FROM productos p JOIN categorias c ON c.id = p.categoria_id
+      ORDER BY p.fecha_creacion DESC
     `);
 
     const talles = await pool.query(`
       SELECT id AS "Id", producto_id AS "ProductoId", talle AS "Talle", stock AS "Stock"
       FROM talles
     `);
+    const imagenes = await pool.query(`
+      SELECT producto_id AS "ProductoId", url AS "Url", orden AS "Orden"
+      FROM producto_imagenes ORDER BY orden, id
+    `);
 
     const productosConTalles = productos.rows.map((p) => ({
       ...p,
       talles: talles.rows.filter((t) => t.ProductoId === p.Id),
+      imagenes: imagenes.rows.filter((i) => i.ProductoId === p.Id),
     }));
 
     res.json(productosConTalles);

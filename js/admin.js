@@ -13,6 +13,15 @@ function mostrarMensaje(texto, tipo = 'error') {
 }
 
 const ESTADOS = ['Activo', 'Reservado', 'Contactado', 'Vendido', 'Cancelado'];
+let categorias = [];
+
+function opcionesCategorias(seleccionada) {
+  return categorias.map((c) => `<option value="${c.Id}" ${Number(c.Id) === Number(seleccionada) ? 'selected' : ''}>${c.Nombre}</option>`).join('');
+}
+
+function urlsImagenes(texto) {
+  return texto.split('\n').map((url) => url.trim()).filter(Boolean);
+}
 
 /* ============================================================
    PESTAÑAS
@@ -128,7 +137,10 @@ async function cargarProductosAdmin() {
   const zona = document.getElementById('lista-productos-admin');
 
   try {
-    const productos = await api('/admin/productos');
+    const [productos, categoriasApi] = await Promise.all([api('/admin/productos'), api('/productos/categorias')]);
+    categorias = categoriasApi;
+    const selectorNuevo = document.getElementById('np-categoria');
+    if (selectorNuevo) selectorNuevo.innerHTML = opcionesCategorias(categorias[0]?.Id);
 
     if (productos.length === 0) {
       zona.innerHTML = '<div class="vacio">Todavía no cargaste ningún diseño.</div>';
@@ -181,9 +193,13 @@ function renderTarjetaAdmin(p) {
           <input type="number" min="0" id="precio-${p.Id}" value="${p.Precio}">
         </div>
         <div style="flex:2;">
-          <label>URL de imagen</label>
-          <input type="text" id="imagen-${p.Id}" value="${(p.ImagenUrl || '').replace(/"/g, '&quot;')}">
+          <label>Categoría</label>
+          <select id="categoria-${p.Id}">${opcionesCategorias(p.CategoriaId)}</select>
         </div>
+      </div>
+      <div>
+        <label>URLs de imágenes (una por línea)</label>
+        <textarea id="imagenes-${p.Id}" placeholder="https://...">${(p.imagenes || []).map((i) => i.Url).join('\n')}</textarea>
       </div>
 
       <div>
@@ -210,7 +226,8 @@ async function guardarInfoProducto(id) {
   const nombre = document.getElementById(`nombre-${id}`).value.trim();
   const descripcion = document.getElementById(`descripcion-${id}`).value.trim();
   const precio = parseFloat(document.getElementById(`precio-${id}`).value);
-  const imagenUrl = document.getElementById(`imagen-${id}`).value.trim();
+  const imagenes = urlsImagenes(document.getElementById(`imagenes-${id}`).value);
+  const categoriaId = Number(document.getElementById(`categoria-${id}`).value);
 
   if (!nombre || isNaN(precio)) {
     mostrarMensaje('Revisá el nombre y el precio del producto.');
@@ -218,7 +235,7 @@ async function guardarInfoProducto(id) {
   }
 
   try {
-    await api(`/productos/${id}`, { method: 'PUT', body: { nombre, descripcion, precio, imagenUrl } });
+    await api(`/productos/${id}`, { method: 'PUT', body: { nombre, descripcion, precio, categoriaId, imagenes } });
     mostrarMensaje('Producto actualizado.', 'ok');
     cargarProductosAdmin();
   } catch (err) {
@@ -336,7 +353,7 @@ function limpiarFormNuevoProducto() {
   document.getElementById('np-nombre').value = '';
   document.getElementById('np-descripcion').value = '';
   document.getElementById('np-precio').value = '';
-  document.getElementById('np-imagen').value = '';
+  document.getElementById('np-imagenes').value = '';
   tallesNuevoProducto = [{ talle: '', stock: 0 }];
   renderTallesNuevoProducto();
 }
@@ -345,7 +362,8 @@ async function crearProductoNuevo() {
   const nombre = document.getElementById('np-nombre').value.trim();
   const descripcion = document.getElementById('np-descripcion').value.trim();
   const precio = parseFloat(document.getElementById('np-precio').value);
-  const imagenUrl = document.getElementById('np-imagen').value.trim();
+  const imagenes = urlsImagenes(document.getElementById('np-imagenes').value);
+  const categoriaId = Number(document.getElementById('np-categoria').value);
   const talles = tallesNuevoProducto.filter((t) => t.talle.trim() !== '');
 
   if (!nombre || isNaN(precio) || talles.length === 0) {
@@ -354,7 +372,7 @@ async function crearProductoNuevo() {
   }
 
   try {
-    await api('/productos', { method: 'POST', body: { nombre, descripcion, precio, imagenUrl, talles } });
+    await api('/productos', { method: 'POST', body: { nombre, descripcion, precio, categoriaId, imagenes, talles } });
     mostrarMensaje('Producto creado correctamente.', 'ok');
     formNuevoProducto.style.display = 'none';
     limpiarFormNuevoProducto();

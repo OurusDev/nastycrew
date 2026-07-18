@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel admin - NASTYCREW</title>
+<link rel="icon" href="https://res.cloudinary.com/kmmt7hrn/image/upload/v1784406572/logo_kjutas.png?v=2">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="cinta-peligro"></div>
-
 <header class="header">
   <a href="index.html" class="marca">NASTY<span>CREW</span></a>
   <nav>
@@ -16,15 +16,60 @@
     <div id="zona-usuario"></div>
   </nav>
 </header>
-
 <main class="contenedor">
   <p class="mono" style="color:#8a8471; font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">Panel admin</p>
-  <h2 style="font-size:34px; margin-bottom:6px;">Reservas de clientes</h2>
-  <p style="color:#8a8471; margin-bottom:28px;">Acá ves el carrito de cada usuario para contactarlo y cerrar la venta.</p>
-  <div id="zona-mensaje"></div>
-  <div id="zona-admin"></div>
-</main>
+  <h2 style="font-size:34px; margin-bottom:20px;">Administración</h2>
 
+  <div class="tabs-admin">
+    <button class="tab-btn activa" id="tab-reservas" data-tab="reservas">Reservas de clientes</button>
+    <button class="tab-btn" id="tab-productos" data-tab="productos">Productos</button>
+  </div>
+
+  <div id="zona-mensaje"></div>
+
+  <section id="panel-reservas">
+    <p style="color:#8a8471; margin-bottom:20px;">Acá ves el carrito de cada usuario para contactarlo y cerrar la venta.</p>
+    <div id="zona-admin"></div>
+  </section>
+
+  <section id="panel-productos" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+      <p style="color:#8a8471; margin:0;">Cargá diseños nuevos, editá precios/descripciones y actualizá el stock por talle.</p>
+      <button class="btn" id="btn-mostrar-form-nuevo">+ Nuevo producto</button>
+    </div>
+
+    <div id="form-nuevo-producto" class="formulario" style="max-width:520px; display:none; margin:0 0 40px;">
+      <h3 style="font-size:20px; margin-bottom:6px;">Nuevo diseño</h3>
+      <div>
+        <label>Nombre</label>
+        <input type="text" id="np-nombre" placeholder='Ej: Remera Oversize "Aurora"'>
+      </div>
+      <div>
+        <label>Descripción</label>
+        <input type="text" id="np-descripcion" placeholder="Ej: Estampa degradé, algodón peinado 24/1">
+      </div>
+      <div>
+        <label>Precio ($)</label>
+        <input type="number" id="np-precio" min="0" step="1">
+      </div>
+      <div>
+        <label>URL de imagen (opcional)</label>
+        <input type="text" id="np-imagen" placeholder="https://...">
+      </div>
+      <div>
+        <label>Talles y stock inicial</label>
+        <div id="np-talles"></div>
+        <button type="button" class="btn btn-outline btn-chico" id="np-agregar-talle" style="margin-top:8px;">+ Agregar talle</button>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:6px;">
+        <button class="btn" id="np-crear">Crear producto</button>
+        <button class="btn btn-outline" id="np-cancelar" type="button">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="lista-productos-admin"></div>
+  </section>
+</main>
 <script src="js/api.js"></script>
 <script src="js/admin.js"></script>
 </body>

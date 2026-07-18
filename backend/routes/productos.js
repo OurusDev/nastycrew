@@ -109,4 +109,69 @@ router.put('/talle/:talleId', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// DELETE /api/productos/talle/:talleId -> eliminar un talle de un producto (solo admin)
+router.delete('/talle/:talleId', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM talles WHERE id = $1', [req.params.talleId]);
+    res.json({ mensaje: 'Talle eliminado.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al eliminar el talle.' });
+  }
+});
+
+// POST /api/productos/:id/talles -> agregar un talle nuevo a un producto existente (solo admin)
+// body: { talle, stock }
+router.post('/:id/talles', requireAuth, requireAdmin, async (req, res) => {
+  const { talle, stock } = req.body;
+  if (!talle) return res.status(400).json({ error: 'Falta indicar el talle (ej: S, M, L, XL).' });
+
+  try {
+    const resultado = await pool.query(
+      `INSERT INTO talles (producto_id, talle, stock)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (producto_id, talle) DO UPDATE SET stock = EXCLUDED.stock
+       RETURNING id AS "Id", talle AS "Talle", stock AS "Stock"`,
+      [req.params.id, talle.toUpperCase(), stock || 0]
+    );
+    res.status(201).json(resultado.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al agregar el talle.' });
+  }
+});
+
+// PUT /api/productos/:id -> editar los datos generales de un producto (solo admin)
+// body: { nombre, descripcion, precio, imagenUrl }
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
+  const { nombre, descripcion, precio, imagenUrl } = req.body;
+  if (!nombre || precio == null) {
+    return res.status(400).json({ error: 'Faltan nombre y precio.' });
+  }
+  try {
+    await pool.query(
+      `UPDATE productos SET nombre = $1, descripcion = $2, precio = $3, imagen_url = $4 WHERE id = $5`,
+      [nombre, descripcion || null, precio, imagenUrl || null, req.params.id]
+    );
+    res.json({ mensaje: 'Producto actualizado.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al actualizar el producto.' });
+  }
+});
+
+// PUT /api/productos/:id/estado -> activar/ocultar un producto del catálogo (solo admin)
+// body: { activo: true | false }
+router.put('/:id/estado', requireAuth, requireAdmin, async (req, res) => {
+  const { activo } = req.body;
+  if (activo == null) return res.status(400).json({ error: 'Falta el valor de activo.' });
+  try {
+    await pool.query('UPDATE productos SET activo = $1 WHERE id = $2', [activo, req.params.id]);
+    res.json({ mensaje: activo ? 'Producto visible en el catálogo.' : 'Producto oculto del catálogo.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al cambiar el estado del producto.' });
+  }
+});
+
 module.exports = router;

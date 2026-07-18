@@ -75,4 +75,32 @@ router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/admin/productos -> todos los productos (incluidos los ocultos) con sus talles,
+// para poder editarlos, cargar stock o crear nuevos desde el panel admin.
+router.get('/productos', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const productos = await pool.query(`
+      SELECT id AS "Id", nombre AS "Nombre", descripcion AS "Descripcion",
+             precio AS "Precio", imagen_url AS "ImagenUrl", activo AS "Activo"
+      FROM productos
+      ORDER BY fecha_creacion DESC
+    `);
+
+    const talles = await pool.query(`
+      SELECT id AS "Id", producto_id AS "ProductoId", talle AS "Talle", stock AS "Stock"
+      FROM talles
+    `);
+
+    const productosConTalles = productos.rows.map((p) => ({
+      ...p,
+      talles: talles.rows.filter((t) => t.ProductoId === p.Id),
+    }));
+
+    res.json(productosConTalles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al obtener los productos.' });
+  }
+});
+
 module.exports = router;

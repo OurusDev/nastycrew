@@ -1,6 +1,7 @@
 const express = require('express');
 const { pool } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { enviarAvisoReserva } = require('../mailer');
 
 const router = express.Router();
 
@@ -156,6 +157,18 @@ router.post('/confirmar', requireAuth, async (req, res) => {
       `UPDATE carritos SET estado = 'Reservado', fecha_actualizacion = NOW() WHERE id = $1`,
       [carritoId]
     );
+
+    const cliente = await pool.query(
+      `SELECT nombre AS "Nombre", email AS "Email", telefono AS "Telefono" FROM usuarios WHERE id = $1`,
+      [req.user.id]
+    );
+    const total = items.reduce((acc, item) => acc + item.Cantidad * Number(item.PrecioUnitario), 0);
+    enviarAvisoReserva({
+      cliente: { nombre: cliente.rows[0].Nombre, email: cliente.rows[0].Email, telefono: cliente.rows[0].Telefono },
+      carritoId,
+      items,
+      total,
+    }).catch((mailError) => console.error('No se pudo enviar el aviso de reserva:', mailError));
 
     res.json({ mensaje: 'Reserva confirmada. En breve te contactamos para coordinar el pago y la entrega.' });
   } catch (err) {

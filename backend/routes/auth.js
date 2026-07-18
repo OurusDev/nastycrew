@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
+const { enviarBienvenida } = require('../mailer');
 
 const router = express.Router();
 
@@ -40,6 +41,9 @@ router.post('/registro', async (req, res) => {
 
     const usuario = resultado.rows[0];
     const token = crearToken(usuario);
+
+    // El registro no debe fallar si el proveedor de correo está temporalmente caído.
+    enviarBienvenida(usuario).catch((mailError) => console.error('No se pudo enviar el mail de bienvenida:', mailError));
 
     res.status(201).json({
       token,

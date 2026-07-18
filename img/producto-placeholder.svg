@@ -1,0 +1,9 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#D9D6D1"/>
+  <path d="M160 184H640V816H160V184Z" fill="#C7C4BE"/>
+  <path d="M263 296L339 240H461L537 296L626 340L540 490V734H260V490L174 340L263 296Z" fill="#151515"/>
+  <path d="M339 240V328H461V240" stroke="#D8FF33" stroke-width="12"/>
+  <text x="400" y="574" fill="#D8FF33" font-family="Arial, sans-serif" font-size="46" font-weight="800" text-anchor="middle">NASTY</text>
+  <text x="400" y="620" fill="#F3F1ED" font-family="Arial, sans-serif" font-size="40" font-weight="800" text-anchor="middle">CREW</text>
+  <text x="400" y="900" fill="#151515" font-family="Arial, sans-serif" font-size="19" font-weight="700" letter-spacing="4" text-anchor="middle">PRODUCT IMAGE COMING SOON</text>
+</svg>

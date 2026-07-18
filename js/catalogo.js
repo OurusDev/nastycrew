@@ -46,7 +46,7 @@ function renderProductos() {
 
 function renderTarjeta(p) {
   const imagenes = p.imagenes?.length ? p.imagenes : (p.ImagenUrl ? [{ Url: p.ImagenUrl }] : []);
-  const slides = imagenes.length ? imagenes.map((img, i) => `<img class="slide ${i === 0 ? 'activa' : ''}" src="${img.Url}" alt="${p.Nombre}" loading="lazy">`).join('') : 'Sin imagen';
+  const slides = imagenes.length ? imagenes.map((img, i) => `<img class="slide ${i === 0 ? 'activa' : ''}" src="${img.Url}" alt="${p.Nombre}" loading="lazy">`).join('') : `<img class="slide activa" src="img/producto-placeholder.svg" alt="Imagen próximamente disponible para ${p.Nombre}">`;
   const talles = p.talles.map((t) => `<button class="talle-btn" id="talle-${p.Id}-${t.Id}" ${t.Stock <= 0 ? 'disabled title="Sin stock"' : ''}>${t.Talle}</button>`).join('');
   return `<article class="tarjeta-producto">
     <div class="imagen slider-catalogo" data-slider="${p.Id}">${slides}${imagenes.length > 1 ? `<button class="slide-control prev" aria-label="Imagen anterior">←</button><button class="slide-control next" aria-label="Imagen siguiente">→</button><span class="slide-count">1/${imagenes.length}</span>` : ''}</div>

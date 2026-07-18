@@ -50,7 +50,7 @@ async function cargarCarrito() {
 function renderFila(it) {
   return `
     <div class="fila-carrito">
-      <div class="miniatura">${it.ImagenUrl ? `<img src="${it.ImagenUrl}" style="width:100%;height:100%;object-fit:cover;">` : ''}</div>
+      <div class="miniatura"><img src="${it.ImagenUrl || 'img/producto-placeholder.svg'}" alt="${it.ProductoNombre}" style="width:100%;height:100%;object-fit:cover;"></div>
       <div>
         <strong>${it.ProductoNombre}</strong><br>
         <span style="color:#7a756c; font-size:13px;">Talle ${it.Talle}</span>

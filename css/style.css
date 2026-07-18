@@ -451,3 +451,109 @@ select.selector-estado {
   .fila-carrito { grid-template-columns: 60px 1fr; }
   .tabla-admin { display: block; overflow-x: auto; }
 }
+
+/* ---------- Pestañas del panel admin ---------- */
+.tabs-admin {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--linea-oscura);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  background: none;
+  border: none;
+  color: var(--gris);
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn:hover { color: var(--papel); }
+.tab-btn.activa {
+  color: var(--acento);
+  border-bottom-color: var(--acento);
+}
+
+/* ---------- Gestión de productos (admin) ---------- */
+.grilla-productos-admin {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.tarjeta-admin-producto {
+  background: var(--papel);
+  color: var(--tinta);
+  border: 1px solid var(--tinta);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 6px 6px 0 0 var(--tinta-suave);
+}
+.tarjeta-admin-producto.oculto { opacity: 0.55; }
+
+.tarjeta-admin-producto label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--gris);
+  display: block;
+  margin-bottom: 3px;
+}
+
+.tarjeta-admin-producto input[type="text"],
+.tarjeta-admin-producto input[type="number"] {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--linea);
+  background: #fff;
+  color: var(--tinta);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+.fila-talle-admin {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.fila-talle-admin input {
+  padding: 7px 8px;
+  border: 1px solid var(--linea);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+}
+.fila-talle-admin .talle-nombre {
+  text-align: center;
+  font-weight: 700;
+  background: var(--papel-fuerte);
+  border: 1px solid var(--tinta);
+  padding: 7px 0;
+}
+
+.fila-nueva-talle {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.fila-nueva-talle input {
+  padding: 7px 8px;
+  border: 1px solid var(--linea);
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+}
+
+.acciones-producto-admin {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--linea);
+}

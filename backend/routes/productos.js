@@ -8,12 +8,12 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const productos = await pool.query(`
-      SELECT id AS "Id", nombre AS "Nombre", descripcion AS "Descripcion",
-             precio AS "Precio", imagen_url AS "ImagenUrl",
+      SELECT p.id AS "Id", p.nombre AS "Nombre", p.descripcion AS "Descripcion",
+             p.precio AS "Precio", p.imagen_url AS "ImagenUrl",
              c.id AS "CategoriaId", c.nombre AS "Categoria", c.slug AS "CategoriaSlug"
       FROM productos p JOIN categorias c ON c.id = p.categoria_id
       WHERE p.activo = true
-      ORDER BY fecha_creacion DESC
+      ORDER BY p.fecha_creacion DESC
     `);
 
     const talles = await pool.query(`
@@ -60,8 +60,8 @@ router.get('/categorias', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const producto = await pool.query(
-      `SELECT id AS "Id", nombre AS "Nombre", descripcion AS "Descripcion",
-              precio AS "Precio", imagen_url AS "ImagenUrl", c.nombre AS "Categoria", c.slug AS "CategoriaSlug"
+      `SELECT p.id AS "Id", p.nombre AS "Nombre", p.descripcion AS "Descripcion",
+              p.precio AS "Precio", p.imagen_url AS "ImagenUrl", c.nombre AS "Categoria", c.slug AS "CategoriaSlug"
        FROM productos p JOIN categorias c ON c.id = p.categoria_id WHERE p.id = $1 AND p.activo = true`,
       [req.params.id]
     );

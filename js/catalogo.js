@@ -14,7 +14,7 @@ async function cargarCatalogo() {
     renderCategorias(categorias);
     renderProductos();
   } catch (err) {
-    mensajeCarga.textContent = 'No se pudo conectar con el servidor. ¿Está corriendo el backend?';
+    mensajeCarga.innerHTML = `No se pudo cargar el catálogo.<br><span class="error-api">${err.message}</span>`;
   }
 }
 

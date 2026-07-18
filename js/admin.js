@@ -1,367 +1,106 @@
-pintarHeader();
+const express = require('express');
+const { pool } = require('../db');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
-const usuario = getUsuario();
-if (!usuario) {
-  window.location.href = 'login.html';
-} else if (!usuario.esAdmin) {
-  document.querySelector('main').innerHTML =
-    '<div class="vacio">Esta sección es solo para administradores.</div>';
-}
+const router = express.Router();
 
-function mostrarMensaje(texto, tipo = 'error') {
-  document.getElementById('zona-mensaje').innerHTML = `<div class="mensaje ${tipo}">${texto}</div>`;
-}
-
-const ESTADOS = ['Activo', 'Reservado', 'Contactado', 'Vendido', 'Cancelado'];
-
-/* ============================================================
-   PESTAÑAS
-   ============================================================ */
-const tabReservas = document.getElementById('tab-reservas');
-const tabProductos = document.getElementById('tab-productos');
-const panelReservas = document.getElementById('panel-reservas');
-const panelProductos = document.getElementById('panel-productos');
-
-if (tabReservas && tabProductos) {
-  tabReservas.addEventListener('click', () => cambiarTab('reservas'));
-  tabProductos.addEventListener('click', () => cambiarTab('productos'));
-}
-
-function cambiarTab(tab) {
-  const esReservas = tab === 'reservas';
-  tabReservas.classList.toggle('activa', esReservas);
-  tabProductos.classList.toggle('activa', !esReservas);
-  panelReservas.style.display = esReservas ? 'block' : 'none';
-  panelProductos.style.display = esReservas ? 'none' : 'block';
-  if (!esReservas) cargarProductosAdmin();
-}
-
-/* ============================================================
-   RESERVAS (ya existente)
-   ============================================================ */
-async function cargarCarritos() {
-  if (!usuario || !usuario.esAdmin) return;
-  const zona = document.getElementById('zona-admin');
-
+// GET /api/admin/carritos -> todos los carritos con datos del usuario y sus ítems
+// Sirve para que vos veas quién reservó qué, y sus datos de contacto (email/teléfono).
+router.get('/carritos', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const carritos = await api('/admin/carritos');
+    const carritos = await pool.query(`
+      SELECT
+        c.id AS "CarritoId", c.estado AS "Estado",
+        c.fecha_creacion AS "FechaCreacion", c.fecha_actualizacion AS "FechaActualizacion",
+        u.id AS "UsuarioId", u.nombre AS "UsuarioNombre", u.email AS "Email", u.telefono AS "Telefono"
+      FROM carritos c
+      JOIN usuarios u ON u.id = c.usuario_id
+      ORDER BY c.fecha_actualizacion DESC
+    `);
 
-    if (carritos.length === 0) {
-      zona.innerHTML = '<div class="vacio">Todavía no hay carritos de clientes.</div>';
-      return;
-    }
+    const items = await pool.query(`
+      SELECT
+        ci.carrito_id AS "CarritoId", ci.id AS "ItemId", ci.cantidad AS "Cantidad",
+        ci.precio_unitario AS "PrecioUnitario",
+        p.nombre AS "ProductoNombre", t.talle AS "Talle"
+      FROM carrito_items ci
+      JOIN productos p ON p.id = ci.producto_id
+      JOIN talles t ON t.id = ci.talle_id
+    `);
 
-    zona.innerHTML = `
-      <table class="tabla-admin">
-        <thead>
-          <tr>
-            <th>Cliente</th>
-            <th>Contacto</th>
-            <th>Prendas</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th>Actualizado</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${carritos.map(renderFilaCarrito).join('')}
-        </tbody>
-      </table>
-    `;
-
-    carritos.forEach((c) => {
-      const select = document.getElementById(`estado-${c.CarritoId}`);
-      if (select) {
-        select.addEventListener('change', (e) => cambiarEstadoCarrito(c.CarritoId, e.target.value));
-      }
+    const carritosConItems = carritos.rows.map((c) => {
+      const suyos = items.rows.filter((i) => i.CarritoId === c.CarritoId);
+      const total = suyos.reduce((acc, it) => acc + it.Cantidad * Number(it.PrecioUnitario), 0);
+      return { ...c, items: suyos, total };
     });
+
+    res.json(carritosConItems);
   } catch (err) {
-    mostrarMensaje('No se pudieron cargar los carritos: ' + err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al obtener los carritos.' });
   }
-}
+});
 
-function renderFilaCarrito(c) {
-  const items = c.items.length
-    ? c.items.map((it) => `${it.Cantidad}× ${it.ProductoNombre} (talle ${it.Talle})`).join('<br>')
-    : '<em>Sin prendas</em>';
-
-  const telefonoLimpio = (c.Telefono || '').replace(/[^0-9]/g, '');
-  const linkWhatsapp = telefonoLimpio
-    ? `<br><a class="contacto-link" target="_blank" href="https://wa.me/${telefonoLimpio}">Abrir WhatsApp</a>`
-    : '';
-
-  return `
-    <tr>
-      <td><strong>${c.UsuarioNombre}</strong></td>
-      <td>
-        <a class="contacto-link" href="mailto:${c.Email}">${c.Email}</a><br>
-        ${c.Telefono || '<em>sin teléfono</em>'}
-        ${linkWhatsapp}
-      </td>
-      <td>${items}</td>
-      <td>${formatearPrecio(c.total)}</td>
-      <td>
-        <span class="pill-estado pill-${c.Estado}">${c.Estado}</span><br>
-        <select class="selector-estado" id="estado-${c.CarritoId}">
-          ${ESTADOS.map((e) => `<option value="${e}" ${e === c.Estado ? 'selected' : ''}>${e}</option>`).join('')}
-        </select>
-      </td>
-      <td>${new Date(c.FechaActualizacion).toLocaleString('es-AR')}</td>
-    </tr>
-  `;
-}
-
-async function cambiarEstadoCarrito(carritoId, estado) {
-  try {
-    await api(`/admin/carritos/${carritoId}/estado`, { method: 'PUT', body: { estado } });
-    cargarCarritos();
-  } catch (err) {
-    mostrarMensaje(err.message);
-  }
-}
-
-/* ============================================================
-   PRODUCTOS (nuevo)
-   ============================================================ */
-async function cargarProductosAdmin() {
-  if (!usuario || !usuario.esAdmin) return;
-  const zona = document.getElementById('lista-productos-admin');
-
-  try {
-    const productos = await api('/admin/productos');
-
-    if (productos.length === 0) {
-      zona.innerHTML = '<div class="vacio">Todavía no cargaste ningún diseño.</div>';
-      return;
-    }
-
-    zona.innerHTML = `<div class="grilla-productos-admin">${productos.map(renderTarjetaAdmin).join('')}</div>`;
-
-    productos.forEach((p) => {
-      document.getElementById(`guardar-info-${p.Id}`).addEventListener('click', () => guardarInfoProducto(p.Id));
-      document.getElementById(`toggle-activo-${p.Id}`).addEventListener('click', () => toggleActivo(p.Id, p.Activo));
-
-      p.talles.forEach((t) => {
-        document.getElementById(`guardar-stock-${t.Id}`).addEventListener('click', () => guardarStock(t.Id, p.Id));
-        document.getElementById(`eliminar-talle-${t.Id}`).addEventListener('click', () => eliminarTalle(t.Id, p.Id));
-      });
-
-      document.getElementById(`agregar-talle-${p.Id}`).addEventListener('click', () => agregarTalle(p.Id));
-    });
-  } catch (err) {
-    mostrarMensaje('No se pudieron cargar los productos: ' + err.message);
-  }
-}
-
-function renderTarjetaAdmin(p) {
-  const talles = p.talles.map((t) => `
-    <div class="fila-talle-admin">
-      <div class="talle-nombre">${t.Talle}</div>
-      <input type="number" min="0" value="${t.Stock}" id="stock-${t.Id}">
-      <div style="display:flex; gap:6px;">
-        <button class="btn btn-chico" id="guardar-stock-${t.Id}" title="Guardar stock">✓</button>
-        <button class="btn btn-outline btn-chico" id="eliminar-talle-${t.Id}" title="Eliminar talle">✕</button>
-      </div>
-    </div>
-  `).join('');
-
-  return `
-    <div class="tarjeta-admin-producto ${p.Activo ? '' : 'oculto'}">
-      <div>
-        <label>Nombre</label>
-        <input type="text" id="nombre-${p.Id}" value="${p.Nombre.replace(/"/g, '&quot;')}">
-      </div>
-      <div>
-        <label>Descripción</label>
-        <input type="text" id="descripcion-${p.Id}" value="${(p.Descripcion || '').replace(/"/g, '&quot;')}">
-      </div>
-      <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
-          <label>Precio ($)</label>
-          <input type="number" min="0" id="precio-${p.Id}" value="${p.Precio}">
-        </div>
-        <div style="flex:2;">
-          <label>URL de imagen</label>
-          <input type="text" id="imagen-${p.Id}" value="${(p.ImagenUrl || '').replace(/"/g, '&quot;')}">
-        </div>
-      </div>
-
-      <div>
-        <label>Talles y stock</label>
-        ${talles || '<p style="color:#8a8471; font-size:13px;">Sin talles cargados.</p>'}
-        <div class="fila-nueva-talle" style="margin-top:8px;">
-          <input type="text" placeholder="Talle" id="nuevo-talle-nombre-${p.Id}" maxlength="6">
-          <input type="number" placeholder="Stock" min="0" id="nuevo-talle-stock-${p.Id}">
-          <button class="btn btn-outline btn-chico" id="agregar-talle-${p.Id}">+ Agregar</button>
-        </div>
-      </div>
-
-      <div class="acciones-producto-admin">
-        <button class="btn btn-chico" id="guardar-info-${p.Id}">Guardar cambios</button>
-        <button class="btn btn-outline btn-chico" id="toggle-activo-${p.Id}">
-          ${p.Activo ? 'Ocultar del catálogo' : 'Mostrar en catálogo'}
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-async function guardarInfoProducto(id) {
-  const nombre = document.getElementById(`nombre-${id}`).value.trim();
-  const descripcion = document.getElementById(`descripcion-${id}`).value.trim();
-  const precio = parseFloat(document.getElementById(`precio-${id}`).value);
-  const imagenUrl = document.getElementById(`imagen-${id}`).value.trim();
-
-  if (!nombre || isNaN(precio)) {
-    mostrarMensaje('Revisá el nombre y el precio del producto.');
-    return;
-  }
-
-  try {
-    await api(`/productos/${id}`, { method: 'PUT', body: { nombre, descripcion, precio, imagenUrl } });
-    mostrarMensaje('Producto actualizado.', 'ok');
-    cargarProductosAdmin();
-  } catch (err) {
-    mostrarMensaje(err.message);
-  }
-}
-
-async function toggleActivo(id, activoActual) {
-  try {
-    await api(`/productos/${id}/estado`, { method: 'PUT', body: { activo: !activoActual } });
-    cargarProductosAdmin();
-  } catch (err) {
-    mostrarMensaje(err.message);
-  }
-}
-
-async function guardarStock(talleId) {
-  const valor = parseInt(document.getElementById(`stock-${talleId}`).value, 10);
-  if (isNaN(valor) || valor < 0) {
-    mostrarMensaje('El stock tiene que ser un número mayor o igual a 0.');
-    return;
+// PUT /api/admin/carritos/:id/estado -> marcar como Contactado / Vendido / Cancelado
+router.put('/carritos/:id/estado', requireAuth, requireAdmin, async (req, res) => {
+  const { estado } = req.body;
+  const validos = ['Activo', 'Reservado', 'Contactado', 'Vendido', 'Cancelado'];
+  if (!validos.includes(estado)) {
+    return res.status(400).json({ error: 'Estado inválido.' });
   }
   try {
-    await api(`/productos/talle/${talleId}`, { method: 'PUT', body: { stock: valor } });
-    mostrarMensaje('Stock actualizado.', 'ok');
+    await pool.query(
+      `UPDATE carritos SET estado = $1, fecha_actualizacion = NOW() WHERE id = $2`,
+      [estado, req.params.id]
+    );
+    res.json({ mensaje: 'Estado actualizado.' });
   } catch (err) {
-    mostrarMensaje(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al actualizar el estado.' });
   }
-}
+});
 
-async function eliminarTalle(talleId, productoId) {
-  if (!confirm('¿Eliminar este talle del producto?')) return;
+// GET /api/admin/usuarios -> listado simple de usuarios registrados
+router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
   try {
-    await api(`/productos/talle/${talleId}`, { method: 'DELETE' });
-    cargarProductosAdmin();
+    const usuarios = await pool.query(`
+      SELECT id AS "Id", nombre AS "Nombre", email AS "Email",
+             telefono AS "Telefono", fecha_creacion AS "FechaCreacion"
+      FROM usuarios ORDER BY fecha_creacion DESC
+    `);
+    res.json(usuarios.rows);
   } catch (err) {
-    mostrarMensaje(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al obtener los usuarios.' });
   }
-}
+});
 
-async function agregarTalle(productoId) {
-  const talle = document.getElementById(`nuevo-talle-nombre-${productoId}`).value.trim();
-  const stock = parseInt(document.getElementById(`nuevo-talle-stock-${productoId}`).value, 10) || 0;
-
-  if (!talle) {
-    mostrarMensaje('Escribí el nombre del talle (ej: S, M, L, XL).');
-    return;
-  }
+// GET /api/admin/productos -> todos los productos (incluidos los ocultos) con sus talles,
+// para poder editarlos, cargar stock o crear nuevos desde el panel admin.
+router.get('/productos', requireAuth, requireAdmin, async (req, res) => {
   try {
-    await api(`/productos/${productoId}/talles`, { method: 'POST', body: { talle, stock } });
-    cargarProductosAdmin();
+    const productos = await pool.query(`
+      SELECT id AS "Id", nombre AS "Nombre", descripcion AS "Descripcion",
+             precio AS "Precio", imagen_url AS "ImagenUrl", activo AS "Activo"
+      FROM productos
+      ORDER BY fecha_creacion DESC
+    `);
+
+    const talles = await pool.query(`
+      SELECT id AS "Id", producto_id AS "ProductoId", talle AS "Talle", stock AS "Stock"
+      FROM talles
+    `);
+
+    const productosConTalles = productos.rows.map((p) => ({
+      ...p,
+      talles: talles.rows.filter((t) => t.ProductoId === p.Id),
+    }));
+
+    res.json(productosConTalles);
   } catch (err) {
-    mostrarMensaje(err.message);
+    console.error(err);
+    res.status(500).json({ error: 'Error del servidor al obtener los productos.' });
   }
-}
+});
 
-/* ============================================================
-   FORMULARIO DE PRODUCTO NUEVO
-   ============================================================ */
-let tallesNuevoProducto = [{ talle: '', stock: 0 }];
-
-const btnMostrarForm = document.getElementById('btn-mostrar-form-nuevo');
-const formNuevoProducto = document.getElementById('form-nuevo-producto');
-
-if (btnMostrarForm) {
-  btnMostrarForm.addEventListener('click', () => {
-    formNuevoProducto.style.display = formNuevoProducto.style.display === 'none' ? 'block' : 'none';
-    renderTallesNuevoProducto();
-  });
-
-  document.getElementById('np-cancelar').addEventListener('click', () => {
-    formNuevoProducto.style.display = 'none';
-    limpiarFormNuevoProducto();
-  });
-
-  document.getElementById('np-agregar-talle').addEventListener('click', () => {
-    tallesNuevoProducto.push({ talle: '', stock: 0 });
-    renderTallesNuevoProducto();
-  });
-
-  document.getElementById('np-crear').addEventListener('click', crearProductoNuevo);
-
-  renderTallesNuevoProducto();
-}
-
-function renderTallesNuevoProducto() {
-  const contenedor = document.getElementById('np-talles');
-  contenedor.innerHTML = tallesNuevoProducto.map((t, i) => `
-    <div class="fila-nueva-talle" style="margin-bottom:6px;">
-      <input type="text" placeholder="Talle" maxlength="6" value="${t.talle}" data-indice="${i}" data-campo="talle" class="np-talle-input">
-      <input type="number" placeholder="Stock" min="0" value="${t.stock}" data-indice="${i}" data-campo="stock" class="np-talle-input">
-      <button type="button" class="btn btn-outline btn-chico np-quitar-talle" data-indice="${i}">✕</button>
-    </div>
-  `).join('');
-
-  contenedor.querySelectorAll('.np-talle-input').forEach((input) => {
-    input.addEventListener('input', (e) => {
-      const i = parseInt(e.target.dataset.indice, 10);
-      const campo = e.target.dataset.campo;
-      tallesNuevoProducto[i][campo] = campo === 'stock' ? parseInt(e.target.value, 10) || 0 : e.target.value;
-    });
-  });
-
-  contenedor.querySelectorAll('.np-quitar-talle').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      const i = parseInt(e.target.dataset.indice, 10);
-      tallesNuevoProducto.splice(i, 1);
-      if (tallesNuevoProducto.length === 0) tallesNuevoProducto.push({ talle: '', stock: 0 });
-      renderTallesNuevoProducto();
-    });
-  });
-}
-
-function limpiarFormNuevoProducto() {
-  document.getElementById('np-nombre').value = '';
-  document.getElementById('np-descripcion').value = '';
-  document.getElementById('np-precio').value = '';
-  document.getElementById('np-imagen').value = '';
-  tallesNuevoProducto = [{ talle: '', stock: 0 }];
-  renderTallesNuevoProducto();
-}
-
-async function crearProductoNuevo() {
-  const nombre = document.getElementById('np-nombre').value.trim();
-  const descripcion = document.getElementById('np-descripcion').value.trim();
-  const precio = parseFloat(document.getElementById('np-precio').value);
-  const imagenUrl = document.getElementById('np-imagen').value.trim();
-  const talles = tallesNuevoProducto.filter((t) => t.talle.trim() !== '');
-
-  if (!nombre || isNaN(precio) || talles.length === 0) {
-    mostrarMensaje('Completá nombre, precio y al menos un talle con su stock.');
-    return;
-  }
-
-  try {
-    await api('/productos', { method: 'POST', body: { nombre, descripcion, precio, imagenUrl, talles } });
-    mostrarMensaje('Producto creado correctamente.', 'ok');
-    formNuevoProducto.style.display = 'none';
-    limpiarFormNuevoProducto();
-    cargarProductosAdmin();
-  } catch (err) {
-    mostrarMensaje(err.message);
-  }
-}
-
-cargarCarritos();
+module.exports = router;

@@ -1,5 +1,5 @@
 // Cambiá esto si tu backend corre en otra URL/puerto.
-const API_URL = 'http://localhost:4000/api';
+const API_URL = 'https://nastycrew.onrender.com/api';
 
 function getToken() {
   return localStorage.getItem('token');

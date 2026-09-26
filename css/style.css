@@ -15,8 +15,8 @@ a { color:inherit; }
 .marca { font-family:'Archivo Black',sans-serif; font-size:24px; text-decoration:none; letter-spacing:-.06em; }
 .marca span { color:var(--acid); }
 .header nav { display:flex; gap:25px; align-items:center; font-family:'DM Mono',monospace; text-transform:uppercase; font-size:11px; letter-spacing:.08em; }
-.header nav a { text-decoration:none; color:var(--paper); padding:6px 0; border-bottom:1px solid transparent; }
-.header nav a:hover { color:var(--acid); border-color:var(--acid); }
+.header nav a { text-decoration:none; color:var(--ink); padding:8px 11px; border:1px solid #4a4a4a; background:var(--paper); }
+.header nav a:hover { color:var(--ink); border-color:var(--acid); background:var(--acid); }
 .header #zona-usuario { display:flex; align-items:center; gap:18px; }
 .header #zona-usuario a { padding:8px 11px; border:1px solid #4a4a4a; background:var(--paper); color:var(--ink); }.header #zona-usuario a:hover { background:var(--acid); border-color:var(--acid); color:var(--ink); }
 .badge-carrito { display:inline-grid; place-items:center; min-width:18px; height:18px; margin-left:5px; padding:0 5px; border-radius:50%; background:var(--acid); color:var(--ink); font-size:10px; }

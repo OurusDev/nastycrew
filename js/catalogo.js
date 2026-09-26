@@ -1,5 +1,22 @@
 pintarHeader();
 
+// Da profundidad al fondo del hero sin afectar el rendimiento del catálogo.
+const metalFondo = document.querySelector('.liquid-metal');
+if (metalFondo && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  let animacionPendiente = false;
+  window.addEventListener('scroll', () => {
+    if (animacionPendiente) return;
+    animacionPendiente = true;
+    requestAnimationFrame(() => {
+      const avance = Math.min(window.scrollY / Math.max(window.innerHeight, 1), 1);
+      metalFondo.style.setProperty('--metal-y', `${avance * 42}px`);
+      metalFondo.style.setProperty('--metal-x', `${avance * -18}px`);
+      metalFondo.style.setProperty('--metal-scale', `${1 + avance * 0.07}`);
+      animacionPendiente = false;
+    });
+  }, { passive: true });
+}
+
 const seleccionTalle = {};
 let categoriaActiva = 'todas';
 let productosCatalogo = [];
